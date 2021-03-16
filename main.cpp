@@ -162,8 +162,10 @@ forward_list<forward_list<int>> clauses_sudoku()
     return clauses;
 }
 
+// TODO
 void propagate(forward_list<forward_list<int>> &clauses, int lit);
 
+// TODO
 void assign(forward_list<forward_list<int>> &clauses, vector<bool> &literals_assigned, vector<bool> &literal_values, int lit);
 
 bool dpll(forward_list<forward_list<int>> &clauses, vector<bool> &literals_assigned, vector<bool> &literal_values)
@@ -187,6 +189,7 @@ bool dpll(forward_list<forward_list<int>> &clauses, vector<bool> &literals_assig
     }
 
     // pure literal
+    // TODO
     int lit; // while clauses contains pure literals
     {
         assign(clauses, literals_assigned, literal_values, lit);
@@ -194,7 +197,8 @@ bool dpll(forward_list<forward_list<int>> &clauses, vector<bool> &literals_assig
     }
 
     // arbitrary assign true
-    int lit; // first unliterals_assigned literal
+    // TODO
+    int lit; // first unassigned literal
 
     forward_list<forward_list<int>> old_clauses{clauses};
     vector<bool> old_literals_assigned{literals_assigned};
