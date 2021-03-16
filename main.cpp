@@ -1,19 +1,19 @@
 #include <iostream>
 #include <string>
-#include <forward_list>
+#include <list>
 #include <vector>
-
-#include "dpll.hpp"
+#include <unordered_set>
 
 using namespace std;
-
-
 
 int box_width, grid_width;
 
 int literal(int row, int column, int digit, bool value = true)
 {
-    return (grid_width * grid_width * row + grid_width * column + digit) * value ? 1 : -1;
+    int id = grid_width * grid_width * row + grid_width * column + digit;
+    if(value)
+        return id;
+    return -id - 1;
 }
 
 int parse_literal(string s)
@@ -38,23 +38,23 @@ int parse_literal(string s)
 }
 
 // read clauses from stdin
-forward_list<forward_list<int>> clauses_input()
+list<unordered_set<int>> clauses_input()
 {
-    forward_list<forward_list<int>> clauses{};
+    list<unordered_set<int>> clauses{};
     
     string line;
     while(getline(cin, line))
     {
-        forward_list<int> clause{};
+        unordered_set<int> clause{};
 
         size_t pos = 0;
         string token;
         while ((pos = line.find(' ')) != string::npos) {
             token = line.substr(0, pos);
-            clause.push_front(parse_literal(token));
+            clause.insert(parse_literal(token));
             line.erase(0, pos + 1);
         }
-        clause.push_front(parse_literal(line));
+        clause.insert(parse_literal(line));
 
         clauses.push_front(clause);
     }
@@ -62,19 +62,19 @@ forward_list<forward_list<int>> clauses_input()
     return clauses;
 }
 
-forward_list<forward_list<int>> clauses_sudoku()
+list<unordered_set<int>> clauses_sudoku()
 {
-    forward_list<forward_list<int>> clauses{};
+    list<unordered_set<int>> clauses{};
 
     // Each space must contain a digit
     for(int row = 0; row < grid_width; ++row)
     {
         for(int column = 0; column < grid_width; ++column)
         {
-            forward_list<int> clause{};
+            unordered_set<int> clause{};
             for(int digit = 0; digit < grid_width; ++digit)
             {
-                clause.push_front(literal(row, column, digit, true));
+                clause.insert(literal(row, column, digit, true));
             }
             clauses.push_front(clause);
         }
@@ -162,13 +162,28 @@ forward_list<forward_list<int>> clauses_sudoku()
     return clauses;
 }
 
-// TODO
-void propagate(forward_list<forward_list<int>> &clauses, int lit);
+void assign(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vector<bool> &lit_value, int lit)
+{
+    if(lit >= 0)
+    {
+        lit_assigned[lit] = true;
+        lit_value[lit] = true;
+    }
+    else
+    {
+        lit_assigned[-lit - 1] = true;
+        lit_value[-lit - 1] = false;
+    }
+    for(auto c = clauses.begin(); c != clauses.end(); ++c)
+    {
+        if(c->find(lit) != c->end())
+            c = clauses.erase(c);
+        else
+            c->erase(-lit - 1);
+    }
+}
 
-// TODO
-void assign(forward_list<forward_list<int>> &clauses, vector<bool> &literals_assigned, vector<bool> &literal_values, int lit);
-
-bool dpll(forward_list<forward_list<int>> &clauses, vector<bool> &literals_assigned, vector<bool> &literal_values)
+bool dpll(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vector<bool> &lit_value)
 {
     // success
     if(clauses.empty())
@@ -181,43 +196,65 @@ bool dpll(forward_list<forward_list<int>> &clauses, vector<bool> &literals_assig
             return false;
     }
 
-    // unit clause
+    // unit clauses
     for(auto c = clauses.begin(); c != clauses.end(); ++c)
     {
-        if(++c->begin() == c->end())
-            propagate(clauses, *c->begin());
+        if(c->size() == 1)
+        {
+            assign(clauses, lit_assigned, lit_value, *c->begin());
+            c = clauses.begin();
+        }
     }
 
-    // pure literal
-    // TODO
-    int lit; // while clauses contains pure literals
+    // pure literals
+    for(int lit = 0; lit < lit_assigned.size(); ++lit)
     {
-        assign(clauses, literals_assigned, literal_values, lit);
-        literals_assigned.push_back(lit);
+        if(!lit_assigned[lit])
+        {
+            bool lit_found = false, negation_found = false;
+            for(auto c = clauses.begin(); c != clauses.end(); ++c)
+            {
+                if(c->find(lit) != c->end())
+                {
+                    lit_found = true;
+                    if(negation_found)
+                        break;
+                }
+                if(c->find(-lit - 1) != c->end())
+                {
+                    negation_found = true;
+                    if(lit_found)
+                        break;
+                }
+            }
+
+            if(lit_found && negation_found)
+                continue;
+            assign(clauses, lit_assigned, lit_value, lit);
+        }
     }
 
     // arbitrary assign true
-    // TODO
-    int lit; // first unassigned literal
-
-    forward_list<forward_list<int>> old_clauses{clauses};
-    vector<bool> old_literals_assigned{literals_assigned};
-    vector<bool> old_literal_values{literal_values};
-
-    assign(clauses, literals_assigned, literal_values, lit);
-    if(dpll(clauses, literals_assigned, literal_values))
+    int lit = 0;
+    while(lit_assigned[lit])
+        ++lit;
+    list<unordered_set<int>> old_clauses{clauses};
+    vector<bool> old_lit_assigned{lit_assigned};
+    vector<bool> old_lit_value{lit_value};
+    assign(clauses, lit_assigned, lit_value, lit);
+    if(dpll(clauses, lit_assigned, lit_value))
         return true;
 
     // arbitrary assign false
     lit *= -1;
     clauses = old_clauses;
-    literals_assigned = old_literals_assigned;
-    literal_values = old_literal_values;
-    assign(clauses, literals_assigned, literal_values, lit);
-    return dpll(clauses, literals_assigned, literal_values);
+    lit_assigned = old_lit_assigned;
+    lit_value = old_lit_value;
+    assign(clauses, lit_assigned, lit_value, lit);
+    return dpll(clauses, lit_assigned, lit_value);
 }
 
-void print_sudoku(vector<bool> literals_assigned, vector<bool> literal_values)
+void print_sudoku(vector<bool> lit_assigned, vector<bool> lit_value)
 {
     for(int row = 0; row < grid_width; ++row)
     {
@@ -237,7 +274,7 @@ void print_sudoku(vector<bool> literals_assigned, vector<bool> literal_values)
             for(int digit = 0; digit < grid_width; ++digit)
             {
                 int lit = literal(row, column, digit);
-                if(literals_assigned[lit] && literal_values[lit])
+                if(lit_assigned[lit] && lit_value[lit])
                     value = digit + 1;
             }
             if(value != 0)
@@ -256,13 +293,13 @@ int main()
     int num_literals = grid_width * grid_width * grid_width;
 
     auto clauses = clauses_input();
-    clauses.splice_after(clauses.before_begin(), clauses_sudoku());
-    vector<bool> literals_assigned(num_literals, false);
-    vector<bool> literal_values(num_literals, false);
+    clauses.splice(clauses.begin(), clauses_sudoku());
+    vector<bool> lit_assigned(num_literals, false);
+    vector<bool> lit_value(num_literals, false);
     
-    if(dpll(clauses, literals_assigned, literal_values))
+    if(dpll(clauses, lit_assigned, lit_value))
     {
-        print_sudoku(literals_assigned, literal_values);
+        print_sudoku(lit_assigned, lit_value);
     }
     else
     {
