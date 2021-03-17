@@ -37,7 +37,7 @@ void assign(clauses_t &clauses, std::vector<bool> &lit_assigned, std::vector<boo
     }
 }
 
-bool solve(clauses_t &clauses, std::vector<bool> &lit_assigned, std::vector<bool> &lit_value)
+bool dpll_recurse(clauses_t &clauses, std::vector<bool> &lit_assigned, std::vector<bool> &lit_value)
 {
     // success
     if(clauses.empty())
@@ -96,7 +96,7 @@ bool solve(clauses_t &clauses, std::vector<bool> &lit_assigned, std::vector<bool
     std::vector<bool> old_lit_assigned{lit_assigned};
     std::vector<bool> old_lit_value{lit_value};
     assign(clauses, lit_assigned, lit_value, lit);
-    if(solve(clauses, lit_assigned, lit_value))
+    if(dpll_recurse(clauses, lit_assigned, lit_value))
         return true;
 
     // arbitrary assign false
@@ -105,7 +105,13 @@ bool solve(clauses_t &clauses, std::vector<bool> &lit_assigned, std::vector<bool
     lit_assigned = old_lit_assigned;
     lit_value = old_lit_value;
     assign(clauses, lit_assigned, lit_value, lit);
-    return solve(clauses, lit_assigned, lit_value);
+    return dpll_recurse(clauses, lit_assigned, lit_value);
+}
+
+bool solve(clauses_t &clauses, std::vector<bool> &literals)
+{
+    std::vector<bool> lit_assigned(literals.size(), false);
+    return dpll_recurse(clauses, lit_assigned, literals);
 }
 
 } // namespace dpll

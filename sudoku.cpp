@@ -163,7 +163,7 @@ dpll::clauses_t clauses_sudoku()
     return clauses;
 }
 
-void print_sudoku(vector<bool> lit_assigned, vector<bool> lit_value)
+void print_sudoku(vector<bool> literals)
 {
     for(int row = grid_width - 1; row >= 0; --row)
     {
@@ -183,13 +183,13 @@ void print_sudoku(vector<bool> lit_assigned, vector<bool> lit_value)
             for(int digit = 0; digit < grid_width; ++digit)
             {
                 int lit = literal(row, column, digit);
-                if(lit_assigned[lit] && lit_value[lit])
+                if(literals[lit])
+                {
                     value = digit + 1;
+                    break;
+                }
             }
-            if(value != 0)
-                cout << value << " ";
-            else
-                cout << "  ";
+            cout << value << " ";
         }
         cout << "\n";
     }
@@ -199,12 +199,11 @@ int main()
 {
     auto clauses = clauses_input();
     clauses.splice(clauses.begin(), clauses_sudoku());
-    std::vector<bool> lit_assigned(num_literals, false);
-    std::vector<bool> lit_value(num_literals, false);
+    std::vector<bool> literals(num_literals, false);
     
-    if(dpll::solve(clauses, lit_assigned, lit_value))
+    if(dpll::solve(clauses, literals))
     {
-        print_sudoku(lit_assigned, lit_value);
+        print_sudoku(literals);
     }
     else
     {
