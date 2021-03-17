@@ -22,17 +22,17 @@ int parse_literal(string s)
     bool value;
     if(s[0] == '~')
     {
-        row = stoi(s.substr(1, 2), nullptr, 16);
-        column = stoi(s.substr(2, 3), nullptr, 16);
-        digit  = stoi(s.substr(3, 4), nullptr, 16);
+        row = stoi(s.substr(1, 1), nullptr, 16) - 1;
+        column = stoi(s.substr(2, 1), nullptr, 16) - 1;
+        digit  = stoi(s.substr(3, 1), nullptr, 16) - 1;
         value = false;
     }
     else
     {
-        row = stoi(s.substr(0, 1), nullptr, 16);
-        column = stoi(s.substr(1, 2), nullptr, 16);
-        digit  = stoi(s.substr(2, 3), nullptr, 16);
-        value = false;
+        row = stoi(s.substr(0, 1), nullptr, 16) - 1;
+        column = stoi(s.substr(1, 1), nullptr, 16) - 1;
+        digit  = stoi(s.substr(2, 1), nullptr, 16) - 1;
+        value = true;
     }
     return literal(row, column, digit, value);
 }
@@ -174,12 +174,18 @@ void assign(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vecto
         lit_assigned[-lit - 1] = true;
         lit_value[-lit - 1] = false;
     }
-    for(auto c = clauses.begin(); c != clauses.end(); ++c)
+    auto c = clauses.begin();
+    while (c != clauses.end())
     {
         if(c->find(lit) != c->end())
+        {
             c = clauses.erase(c);
+        }
         else
+        {
             c->erase(-lit - 1);
+            ++c;
+        }
     }
 }
 
@@ -256,18 +262,18 @@ bool dpll(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vector<
 
 void print_sudoku(vector<bool> lit_assigned, vector<bool> lit_value)
 {
-    for(int row = 0; row < grid_width; ++row)
+    for(int row = grid_width - 1; row >= 0; --row)
     {
-        if(row % box_width + 1 == box_width)
+        if(row != grid_width - 1 && row % box_width == box_width - 1)
         {
-            for(int column = 0; column < grid_width + box_width - 3; ++column)
+            for(int column = 0; column < (grid_width + box_width) * 2 - 3; ++column)
                 cout << "-";
             cout << "\n";
         }
 
         for(int column = 0; column < grid_width; ++column)
         {
-            if(column % box_width + 1 == box_width)
+            if(column != 0 && column % box_width == 0)
                 cout << "| ";
 
             int value = 0;
@@ -288,10 +294,11 @@ void print_sudoku(vector<bool> lit_assigned, vector<bool> lit_value)
 
 int main()
 {
-    cin >> box_width;
+    string line;
+    getline(cin, line);
+    box_width = stoi(line);
     grid_width = box_width * box_width;
     int num_literals = grid_width * grid_width * grid_width;
-
     auto clauses = clauses_input();
     clauses.splice(clauses.begin(), clauses_sudoku());
     vector<bool> lit_assigned(num_literals, false);
