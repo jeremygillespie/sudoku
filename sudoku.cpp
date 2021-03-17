@@ -1,25 +1,20 @@
-#ifndef SUDOKU_SUDOKU_HPP
-#define SUDOKU_SUDOKE_HPP
-
 #include <iostream>
 #include <string>
 
 #include "dpll.hpp"
 
-namespace sudoku
-{
-using namespace std;
-
 constexpr int box_width = 3;
 constexpr int grid_width = box_width * box_width;
 constexpr int num_literals = grid_width * grid_width * grid_width;
+
+using namespace std;
 
 int literal(int row, int column, int digit, bool value = true)
 {
     int id = grid_width * grid_width * row + grid_width * column + digit;
     if(value)
         return id;
-    return -id - 1;
+    return ~id;
 }
 
 int parse_literal(string s)
@@ -44,9 +39,9 @@ int parse_literal(string s)
 }
 
 // read clauses from stdin
-list<unordered_set<int>> clauses_input()
+dpll::clauses_t clauses_input()
 {
-    list<unordered_set<int>> clauses{};
+    dpll::clauses_t clauses{};
     
     string line;
     while(getline(cin, line))
@@ -68,9 +63,9 @@ list<unordered_set<int>> clauses_input()
     return clauses;
 }
 
-list<unordered_set<int>> clauses_sudoku()
+dpll::clauses_t clauses_sudoku()
 {
-    list<unordered_set<int>> clauses{};
+    dpll::clauses_t clauses{};
 
     // Each space must contain a digit
     for(int row = 0; row < grid_width; ++row)
@@ -200,6 +195,19 @@ void print_sudoku(vector<bool> lit_assigned, vector<bool> lit_value)
     }
 }
 
-} // namespace sudoku
-
-#endif
+int main()
+{
+    auto clauses = clauses_input();
+    clauses.splice(clauses.begin(), clauses_sudoku());
+    std::vector<bool> lit_assigned(num_literals, false);
+    std::vector<bool> lit_value(num_literals, false);
+    
+    if(dpll::solve(clauses, lit_assigned, lit_value))
+    {
+        print_sudoku(lit_assigned, lit_value);
+    }
+    else
+    {
+        std::cout << "no solution\n";
+    }
+}

@@ -5,12 +5,12 @@
 #include <vector>
 #include <unordered_set>
 
-namespace sudoku
+namespace dpll
 {
 
-using namespace std;
+using clauses_t = std::list<std::unordered_set<int>>;
 
-void assign(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vector<bool> &lit_value, int lit)
+void assign(clauses_t &clauses, std::vector<bool> &lit_assigned, std::vector<bool> &lit_value, int lit)
 {
     if(lit >= 0)
     {
@@ -19,8 +19,8 @@ void assign(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vecto
     }
     else
     {
-        lit_assigned[-lit - 1] = true;
-        lit_value[-lit - 1] = false;
+        lit_assigned[~lit] = true;
+        lit_value[~lit] = false;
     }
     auto c = clauses.begin();
     while (c != clauses.end())
@@ -31,13 +31,13 @@ void assign(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vecto
         }
         else
         {
-            c->erase(-lit - 1);
+            c->erase(~lit);
             ++c;
         }
     }
 }
 
-bool dpll(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vector<bool> &lit_value)
+bool solve(clauses_t &clauses, std::vector<bool> &lit_assigned, std::vector<bool> &lit_value)
 {
     // success
     if(clauses.empty())
@@ -74,7 +74,7 @@ bool dpll(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vector<
                     if(negation_found)
                         break;
                 }
-                if(c->find(-lit - 1) != c->end())
+                if(c->find(~lit) != c->end())
                 {
                     negation_found = true;
                     if(lit_found)
@@ -92,11 +92,11 @@ bool dpll(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vector<
     int lit = 0;
     while(lit_assigned[lit])
         ++lit;
-    list<unordered_set<int>> old_clauses{clauses};
-    vector<bool> old_lit_assigned{lit_assigned};
-    vector<bool> old_lit_value{lit_value};
+    clauses_t old_clauses{clauses};
+    std::vector<bool> old_lit_assigned{lit_assigned};
+    std::vector<bool> old_lit_value{lit_value};
     assign(clauses, lit_assigned, lit_value, lit);
-    if(dpll(clauses, lit_assigned, lit_value))
+    if(solve(clauses, lit_assigned, lit_value))
         return true;
 
     // arbitrary assign false
@@ -105,9 +105,9 @@ bool dpll(list<unordered_set<int>> &clauses, vector<bool> &lit_assigned, vector<
     lit_assigned = old_lit_assigned;
     lit_value = old_lit_value;
     assign(clauses, lit_assigned, lit_value, lit);
-    return dpll(clauses, lit_assigned, lit_value);
+    return solve(clauses, lit_assigned, lit_value);
 }
 
-} // namespace sudoku
+} // namespace dpll
 
 #endif
